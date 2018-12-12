@@ -162,30 +162,6 @@ namespace Transportlaget
             } while (!receiveAck() && failedTransmissions <= 5);
 
             old_seqNo = DEFAULT_SEQNO;
-
-
-            //// TO DO Your own code
-            //buffer[0] = 0;
-            //buffer[1] = 0;
-            //buffer[2] = seqNo;
-            //buffer[3] = 0;
-            //Array.Copy(buf, 0, buffer, HEADER_SIZE, buf.Length);
-            //checksum.calcChecksum(ref buffer, size + HEADER_SIZE);
-
-
-            //bool ackReceived = false;
-            //do
-            //{
-            //    if (++errorCount == 10);
-            //    {
-            //        buffer[0]++;
-            //        Console.WriteLine("Noise introduced - byte 1 has been spoiled in third transmission");
-            //        errorCount = 0;
-            //    }
-            //    link.send(buffer, size + HEADER_SIZE);
-            //    ackReceived = receiveAck();
-            //} while (!ackReceived);
-
         }
 
         /// <summary>
@@ -204,6 +180,7 @@ namespace Transportlaget
                 receivedBytes = link.receive(ref buffer);
                 receivedOK = checksum.checkChecksum(buffer, receivedBytes);
                 sendAck(receivedOK);
+                old_seqNo = buffer[(int)TransCHKSUM.SEQNO];
                 Array.Copy(buffer, HEADER_SIZE, buf, 0, buf.Length);
             } while (!receivedOK);
             return receivedBytes - HEADER_SIZE;
