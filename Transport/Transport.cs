@@ -120,7 +120,7 @@ namespace Transportlaget
             if (++errorCount == 3)
             {
                 buffer[1]++;
-                Console.WriteLine("Noise introduced - byte 1 has been spoiled in third transmission");
+                Console.WriteLine("Noise introduced - byte 1 has been spoiled in ACK-message");
             }
 
             link.send(ackBuf, (int)TransSize.ACKSIZE);
@@ -150,6 +150,12 @@ namespace Transportlaget
             bool ackReceived = false;
             do
             {
+                if (++errorCount == 10);
+                {
+                    buffer[1]++;
+                    Console.WriteLine("Noise introduced - byte 1 has been spoiled in third transmission");
+                    errorCount = 0;
+                }
                 link.send(buffer, size + HEADER_SIZE);
                 ackReceived = receiveAck();
             } while (!ackReceived);
