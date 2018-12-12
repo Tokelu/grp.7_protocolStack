@@ -118,7 +118,7 @@ namespace Transportlaget
             ackBuf[(int)TransCHKSUM.TYPE] = (byte)(int)TransType.ACK;
             checksum.calcChecksum(ref ackBuf, (int)TransSize.ACKSIZE);
 
-            if (++errorCount2 == 3)
+            if (++errorCount2 == 10)
             {
                 buffer[1]++;
                 Console.WriteLine("  -   Noise introduced - byte 1 has been spoiled in ACK-message");
@@ -150,11 +150,11 @@ namespace Transportlaget
 
                 checksum.calcChecksum(ref buffer, size + HEADER_SIZE); // data + header
 
+                    
                 if (++errorCount == 100)
                 {
                     buffer[0]++;
-                    Console.WriteLine($"  -   Noise introduced - byte 1 has been spoiled in transmission #{sumErrorCount}");
-                    sumErrorCount += errorCount;
+                    Console.WriteLine($"  -   Noise introduced - byte 0 has been spoiled in transmission ");
                     errorCount = 0;
                 }
                 link.send(buffer, size + HEADER_SIZE);
