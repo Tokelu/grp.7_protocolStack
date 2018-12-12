@@ -6,168 +6,152 @@ using System.IO.Ports;
 /// </summary>
 namespace Linklaget
 {
-	/// <summary>
-	/// Link.
-	/// </summary>
-	public class Link
-	{
-		/// <summary>
-		/// The DELIMITE for slip protocol.
-		/// </summary>
-		const byte Delimiter = (byte)'A';
-		/// <summary>
-		/// The buffer for link.
-		/// </summary>
-		private readonly byte[] _buffer;
+    /// <summary>
+    /// Link.
+    /// </summary>
+    public class Link
+    {
+        /// <summary>
+        /// The DELIMITE for slip protocol.
+        /// </summary>
+        const byte DELIMITER = (byte)'A';
+        /// <summary>
+        /// The buffer for link.
+        /// </summary>
+        private byte[] buffer;
+        /// <summary>
+        /// The serial port.
+        /// </summary>
+        SerialPort serialPort;
 
-	    /// <summary>
-	    /// The serial port.
-	    /// </summary>
-	    private static SerialPort _serialPort = null;
+        /// <summary>
+        /// Initializes a new instance of the <see cref="link"/> class.
+        /// </summary>
+        public Link(int BUFSIZE, string APP)
+        {
+            // Create a new SerialPort object with default settings.
+#if DEBUG
+            if (APP.Equals("FILE_SERVER"))
+            {
+                serialPort = new SerialPort("/dev/ttyS1", 115200, Parity.None, 8, StopBits.One);
+            }
+            else
+            {
+                serialPort = new SerialPort("/dev/ttyS1", 115200, Parity.None, 8, StopBits.One);
+            }
+#else
+				serialPort = new SerialPort("/dev/ttyS1",115200,Parity.None,8,StopBits.One);
+#endif
+            if (!serialPort.IsOpen)
+                serialPort.Open();
 
-		/// <summary>
-		/// Initializes a new instance of the <see cref="link"/> class.
-		/// </summary>
-		public Link (int buffSize)
-		{
-			// Create a new SerialPort object with default settings.
+            buffer = new byte[(BUFSIZE * 2)];
 
-			_serialPort = _serialPort ?? new SerialPort("/dev/ttyS1",115200,Parity.None,8,StopBits.One);
+            // Uncomment the next line to use timeout
+            //serialPort.ReadTimeout = 500;
 
-			if(!_serialPort.IsOpen)
-				_serialPort.Open();
+            serialPort.DiscardInBuffer();
+            serialPort.DiscardOutBuffer();
+        }
 
-			_buffer = new byte[(buffSize*2) + 2]; // Added two extra for delimeters
+        /// <summary>
+        /// Send the specified buf and size.
+        /// </summary>
+        /// <param name='buf'>
+        /// Buffer.
+        /// </param>
+        /// <param name='size'>
+        /// Size.
+        /// </param>
+        public void send(byte[] buf, int size)
+        {
+            // TO DO Your own code
 
-			// Uncomment the next line to use timeout
-			_serialPort.ReadTimeout = 500;
+            buffer[0] = 65;//start A
+            int bytesToSendIndex = 1;
+            for (int i = 0; i < size; i++)
+            {
+                if (buf[i] == 65)
+                {
+                    buffer[bytesToSendIndex] = 66;//B
+                    bytesToSendIndex++;
+                    buffer[bytesToSendIndex] = 67;//C
+                    bytesToSendIndex++;
+                }
+                else if (buf[i] == 66)
+                {
+                    buffer[bytesToSendIndex] = 66;//B
 
-			_serialPort.DiscardInBuffer ();
-			_serialPort.DiscardOutBuffer ();
-		}
+                    bytesToSendIndex++;
+                    buffer[bytesToSendIndex] = 68;//D
+                    bytesToSendIndex++;
+                }
+                else
+                {
+                    buffer[bytesToSendIndex] = buf[i];
+                    bytesToSendIndex++;
+                }
+            }
+            buffer[bytesToSendIndex] = 65;//ending A
+            bytesToSendIndex++;
+            serialPort.Write(buffer, 0, bytesToSendIndex);
+        }
 
-		/// <summary>
-		/// Send the specified buf and size.
-		/// </summary>
-		/// <param name='buf'>
-		/// Buffer.
-		/// </param>
-		/// <param name='size'>
-		/// Size.
-		/// </param>
-		public void Send (byte[] buf, int size)
-		{
-			var byteCount = Frame (buf, size);
-			_serialPort.Write(_buffer, 0, byteCount);
-		}
+        /// <summary>
+        /// Receive the specified buf and size.
+        /// </summary>
+        /// <param name='buf'>
+        /// Buffer.
+        /// </param>
+        /// <param name='size'>
+        /// Size.
+        /// </param>
+        public int receive(ref byte[] buf)
+        {
+            // TO DO Your own code
+            byte[] tempBuf = new byte[1];
+            int bytesReceived = 0;
+            while (true)
+            {
+                serialPort.Read(tempBuf, 0, 1);
 
-		/// <summary>
-		/// Receive the specified buf and size.
-		/// </summary>
-		/// <param name='buf'>
-		/// Buffer.
-		/// </param>
-		/// <param name='size'>
-		/// Size.
-		/// </param>
-		public int Receive (ref byte[] buf)
-		{			
-			var sizeWithDelimiter = Receive ();
-			var size = Deframe (ref buf, sizeWithDelimiter);
-			return size;
-		}
+                while (tempBuf[0] != 'A')
+                {
+                }
+                bool registerStop = false;
 
-        #region Receive Utility
+                while (!registerStop)
+                {
 
-	    private int Receive()
-	    {
-	        while (!BeginReceive()) { }
-	        int counter = 0;
-	        while (counter < _buffer.Length)
-	        {
-	            var received = (byte)_serialPort.ReadByte();
-	            _buffer[counter++] = received;
-	            if (received == Delimiter)
-	                break;
-	        }
-	        return counter;
-	    }
+                    serialPort.Read(tempBuf, 0, 1);
 
-	    private bool BeginReceive()
-	    {
-	        var received = (byte)_serialPort.ReadByte();
-	        if (received == Delimiter)
-	            return true;
+                    if (tempBuf[0] == 'A')
+                        registerStop = true;
+                    else if (tempBuf[0] == 'B')
+                    {
+                        serialPort.Read(tempBuf, 0, 1);
 
-	        return false;
-	    }
-
-        #endregion
-
-        #region Framing
-
-	    /// <summary>
-	    /// Deframes what is currently stored in buffer and returns this to target
-	    /// Size is the size of what is currently stored in buffer including the final delimiter
-	    /// </summary>
-	    /// <param name="">.</param>
-	    private int Deframe(ref byte[] target, int size)
-	    {
-	        var inserted = 0;
-	        for (var i = 0; i < size - 1; i++)
-	        {
-	            if (_buffer[i] == (byte)'B')
-	            {
-	                if (_buffer[++i] == (byte)'C')
-	                    target[inserted++] = (byte)'A';
-	                else
-	                    target[inserted++] = (byte)'B';
-
-	                continue;
-	            }
-	            target[inserted++] = _buffer[i];
-	        }
-	        return inserted;
-	    }
-
-
-	    /// <summary>
-	    /// Frames the given buf with the given size
-	    /// </summary>
-	    /// <param name="buf"></param>
-	    /// <param name="size"></param>
-	    /// <returns></returns>
-	    private int Frame(byte[] buf, int size)
-	    {
-	        var counter = 0;
-	        var inserted = 0;
-
-	        _buffer[inserted++] = Delimiter;
-
-	        while (counter < size)
-	        {
-	            if (buf[counter] == Delimiter)
-	            {
-	                _buffer[inserted++] = (byte)'B';
-	                _buffer[inserted++] = (byte)'C';
-	            }
-	            else if (buf[counter] == (byte)'B')
-	            {
-	                _buffer[inserted++] = (byte)'B';
-	                _buffer[inserted++] = (byte)'D';
-	            }
-	            else
-	            {
-	                _buffer[inserted++] = buf[counter];
-	            }
-	            counter++;
-	        }
-
-	        _buffer[inserted++] = Delimiter;
-	        return inserted;
-	    }
-
-        #endregion
-
+                        if (tempBuf[0] == 'C')
+                        {
+                            buf[bytesReceived] = 65;
+                            bytesReceived++;
+                        }
+                        else if (tempBuf[0] == 'D')
+                        {
+                            buf[bytesReceived] = 66;
+                            bytesReceived++;
+                        }
+                        else
+                            Console.WriteLine("Bad byte after B");
+                    }
+                    else
+                    {
+                        buf[bytesReceived] = tempBuf[0];
+                        bytesReceived++;
+                    }
+                }
+                return bytesReceived;
+            }
+        }
     }
 }

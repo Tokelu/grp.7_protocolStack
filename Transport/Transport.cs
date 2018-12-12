@@ -6,189 +6,175 @@ using Linklaget;
 /// </summary>
 namespace Transportlaget
 {
-	/// <summary>
-	/// Transport.
-	/// </summary>
-	public class Transport
-	{
-		/// <summary>
-		/// The _link.
-		/// </summary>
-		private readonly Link _link;
-		/// <summary>
-		/// The 1' complements _checksum.
-		/// </summary>
-		private readonly Checksum _checksum;
-		/// <summary>
-		/// The _buffer.
-		/// </summary>
-		private byte[] _buffer;
-		/// <summary>
-		/// The seq no.
-		/// </summary>
-		private byte _seqNr;
-		/// <summary>
-		/// The error count.
-		/// </summary>
-		private int _errorCount;
-		/// <summary>
-		/// The DefaultSeqNr.
-		/// </summary>
-		private const int DefaultSeqNr = 2;
+    /// <summary>
+    /// Transport.
+    /// </summary>
+    public class Transport
+    {
         /// <summary>
-        /// For simulating noise
+        /// The link.
         /// </summary>
-		private int _noiseSimulation = 0;
+        private Link link;
         /// <summary>
-		/// Initializes a new instance of the <see cref="Transport"/> class.
-		/// </summary>
-		public Transport (int buffSize)
-		{
-			_link = new Link(buffSize+(int)TransSize.ACKSIZE);
-			_checksum = new Checksum();
-			_buffer = new byte[buffSize+(int)TransSize.ACKSIZE];
-			_seqNr = 0;
-			_errorCount = 0;
-		}
+        /// The 1' complements checksum.
+        /// </summary>
+        private Checksum checksum;
+        /// <summary>
+        /// The buffer.
+        /// </summary>
+        private byte[] buffer;
+        /// <summary>
+        /// The seq no.
+        /// </summary>
+        private byte seqNo;
+        /// <summary>
+        /// The old_seq no.
+        /// </summary>
+        private byte old_seqNo;
+        /// <summary>
+        /// The error count.
+        /// </summary>
+        private int errorCount;
+        /// <summary>
+        /// The DEFAULT_SEQNO.
+        /// </summary>
+        private const int DEFAULT_SEQNO = 2;
+        /// <summary>
+        /// The data received. True = received data in receiveAck, False = not received data in receiveAck
+        /// </summary>
+        private bool dataReceived;
+        /// <summary>
+        /// The number of data the recveived.
+        /// </summary>
+        /// 
+        private int recvSize = 0;
+        private const int HEADER_SIZE = 4;
+        private int TRANSBUFSIZE = 1000;
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Transport"/> class.
+        /// </summary>
+        public Transport(int BUFSIZE, string APP)
+        {
+            link = new Link(BUFSIZE + (int)TransSize.ACKSIZE, APP);
+            checksum = new Checksum();
+            buffer = new byte[BUFSIZE + (int)TransSize.ACKSIZE];
+            seqNo = 0;
+            old_seqNo = DEFAULT_SEQNO;
+            errorCount = 0;
+            dataReceived = false;
+        }
+        public void sendText(string textToSend)
+        {
+            System.Text.UTF8Encoding encoding = new System.Text.UTF8Encoding();
+            send(encoding.GetBytes(textToSend), textToSend.Length);
+        }
 
-		/// <summary>
-		/// Send the specified _buffer and size.
-		/// </summary>
-		/// <param name='buf'>
-		/// Buffer.
-		/// </param>
-		/// <param name='size'>
-		/// Size.
-		/// </param>
-		public void Send(byte[] buf, int size)
-		{
-            // Construct the package
-			var packageSize = ConstructPackage(buf, size);
+        public string readText()
+        {
+            byte[] stringBuffer = new byte[TRANSBUFSIZE];
+            System.Text.UTF8Encoding encoding = new System.Text.UTF8Encoding();
+            int bytesReceived = receive(ref stringBuffer);
+            return encoding.GetString(stringBuffer, 0, bytesReceived);
+        }
 
-		    while (_errorCount < 5)
-		    {
-		        try
-		        {
-		            do
-		            {
-		                _link.Send(_buffer, packageSize);
-		            } while (ReceiveAck() != _seqNr);
-		            NextSeqNo();
-		            break;
-		        }
-		        catch (TimeoutException)
-		        {
-		            _errorCount++;
-		        }
-		    }
+        /// <summary>
+        /// Receives the ack.
+        /// </summary>
+        /// <returns>
+        /// The ack.
+        /// </returns>
+        private bool receiveAck()
+        {
+            recvSize = link.receive(ref buffer);
+            dataReceived = true;
 
-		    _errorCount = 0;
-		}
-
-	    public int Receive(ref byte[] buff)
-	    {
-	        var readSize = 0;
-
-	        while (readSize == 0 && _errorCount < 5) 
-	        {
-	            try
-	            {
-	                while ((readSize = _link.Receive(ref _buffer)) > 0)
-	                {
-	                    if (_checksum.checkChecksum(_buffer, readSize))
-	                    {
-                            SendAck(true);
-	                        if (_buffer[(int) TransCHKSUM.SEQNO] == _seqNr)
-	                        {
-	                            NextSeqNo();
-	                            readSize = buff.Length < readSize - (int)TransSize.ACKSIZE ? buff.Length : readSize - (int)TransSize.ACKSIZE;
-	                            Array.Copy(_buffer, (int)TransSize.ACKSIZE, buff, 0, readSize);
-	                            break;
-	                        }
-	                            
-                            continue;
-	                    }
-
-	                    SendAck(false);
-	                }                   
-	            }
-	            catch (TimeoutException)
-	            {
-	                readSize = 0;
-                    _errorCount++;
-	            }
-
+            if (recvSize == (int)TransSize.ACKSIZE)
+            {
+                dataReceived = false;
+                if (!checksum.checkChecksum(buffer, (int)TransSize.ACKSIZE) ||
+                  buffer[(int)TransCHKSUM.SEQNO] != seqNo ||
+                  buffer[(int)TransCHKSUM.TYPE] != (int)TransType.ACK)
+                {
+                    return false;
+                }
+                seqNo = (byte)((buffer[(int)TransCHKSUM.SEQNO] + 1) % 2);
             }
 
-	        _errorCount = 0;
-	        return readSize;
-	    }
+            return true;
+        }
 
-        #region Utility
+        /// <summary>
+        /// Sends the ack.
+        /// </summary>
+        /// <param name='ackType'>
+        /// Ack type.
+        /// </param>
+        private void sendAck(bool ackType)
+        {
+            byte[] ackBuf = new byte[(int)TransSize.ACKSIZE];
+            ackBuf[(int)TransCHKSUM.SEQNO] = (byte)
+                (ackType ? (byte)buffer[(int)TransCHKSUM.SEQNO] : (byte)(buffer[(int)TransCHKSUM.SEQNO] + 1) % 2);
+            ackBuf[(int)TransCHKSUM.TYPE] = (byte)(int)TransType.ACK;
+            checksum.calcChecksum(ref ackBuf, (int)TransSize.ACKSIZE);
 
-	    /// <summary>
-	    /// Receives the ack.
-	    /// </summary>
-	    /// <returns>
-	    /// The ack.
-	    /// </returns>
-	    private byte ReceiveAck()
-	    {
-	        byte[] buf = new byte[(int)TransSize.ACKSIZE];
-	        int size = _link.Receive(ref buf);
+            if (++errorCount == 3)
+            {
+                buffer[1]++;
+                Console.WriteLine("Noise introduced - byte 1 has been spoiled in third transmission");
+            }
 
-	        if (size != (int)TransSize.ACKSIZE) return DefaultSeqNr;
+            link.send(ackBuf, (int)TransSize.ACKSIZE);
+        }
 
-	        if (!_checksum.checkChecksum(buf, (int)TransSize.ACKSIZE) ||
-	            buf[(int)TransCHKSUM.SEQNO] != _seqNr || buf[(int)TransCHKSUM.TYPE] != (int)TransType.ACK)
-	            return DefaultSeqNr;
+        /// <summary>
+        /// Send the specified buffer and size.
+        /// </summary>
+        /// <param name='buffer'>
+        /// Buffer.
+        /// </param>
+        /// <param name='size'>
+        /// Size.
+        /// </param>
+        public void send(byte[] buf, int size)
+        {
 
-	        return _seqNr;
-	    }
-
-	    /// <summary>
-	    /// Sends the ack.
-	    /// </summary>
-	    /// <param name='ackType'>
-	    /// Ack type.
-	    /// </param>
-	    private void SendAck(bool ackType)
-	    {
-	        byte[] ackBuf = new byte[(int)TransSize.ACKSIZE];
-	        ackBuf[(int)TransCHKSUM.SEQNO] = (byte)
-	            (ackType ? _buffer[(int)TransCHKSUM.SEQNO] : (byte)(_buffer[(int)TransCHKSUM.SEQNO] + 1) % 2);
-	        ackBuf[(int)TransCHKSUM.TYPE] = (byte)(int)TransType.ACK;
-	        _checksum.calcChecksum(ref ackBuf, (int)TransSize.ACKSIZE);
-
-	        if (++_noiseSimulation == 2)
-	        {
-	            ackBuf[0]++;
-	            _noiseSimulation = 0;
-	        }
-
-	        _link.Send(ackBuf, (int)TransSize.ACKSIZE);
-	    }
-
-        private void NextSeqNo()
-	    {
-	        _seqNr = (byte)((_seqNr + 1) % 2);
-	    }
-
-	    private int ConstructPackage(byte[] data, int size)
-	    {
-	        _buffer[(int)TransCHKSUM.SEQNO] = _seqNr;
-	        _buffer[(int)TransCHKSUM.TYPE] = (int)TransType.DATA;
-	        for (var i = 0; i < size; i++)
-	        {
-	            _buffer[i + (int)TransSize.ACKSIZE] = data[i];
-	        }
-	        size = size + (int)TransSize.ACKSIZE;
-	        _checksum.calcChecksum(ref _buffer, size);
-	        return size;
-	    }
-
-        #endregion
+            // TO DO Your own code
+            buffer[0] = 0;
+            buffer[1] = 0;
+            buffer[2] = seqNo;
+            buffer[3] = 0;
+            Array.Copy(buf, 0, buffer, HEADER_SIZE, buf.Length);
+            checksum.calcChecksum(ref buffer, size + HEADER_SIZE);
 
 
+            bool ackReceived = false;
+            do
+            {
+                link.send(buffer, size + HEADER_SIZE);
+                ackReceived = receiveAck();
+            } while (!ackReceived);
+
+        }
+
+        /// <summary>
+        /// Receive the specified buffer.
+        /// </summary>
+        /// <param name='buffer'>
+        /// Buffer.
+        /// </param>
+        public int receive(ref byte[] buf)
+        {
+            // TO DO Your own code
+            int receivedBytes = 0;
+            bool receivedOK = false;
+            do
+            {
+                receivedBytes = link.receive(ref buffer);
+                receivedOK = checksum.checkChecksum(buffer, receivedBytes);
+                sendAck(receivedOK);
+                Array.Copy(buffer, HEADER_SIZE, buf, 0, buf.Length);
+            } while (!receivedOK);
+            return receivedBytes - HEADER_SIZE;
+        }
     }
 }

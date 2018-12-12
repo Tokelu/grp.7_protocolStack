@@ -6,111 +6,120 @@ using Library;
 
 namespace Application
 {
-	class file_server
-	{
-		/// <summary>
-		/// The BUFSIZE
-		/// </summary>
-		private const int BUFSIZE = 10000;
-		private const string APP = "FILE_SERVER";
+    class file_server
+    {
+        /// <summary>
+        /// The BUFSIZE
+        /// </summary>
+        private const int BUFSIZE = 1000;
+        private const string APP = "FILE_SERVER";
+        const int PORT = 9000;
+        /// <summary>
+        /// Initializes a new instance of the <see cref="file_server"/> class.
+        /// </summary>
+        private file_server()
+        { 
+            // TO DO Your own code
+            Transport transport = new Transport(BUFSIZE, APP);
+           
+            try
+            {
+                Console.WriteLine("Server runing - Awaiting Client");
+                string fileToSend = transport.readText();
+                Console.WriteLine("Client connected, want to pick up: " + fileToSend);
+                long fileSize = LIB.check_File_Exists(fileToSend);
+                if (fileSize != 0)
+                {
+                    transport.sendText("FileFound");
+                    Console.WriteLine("The file was found on the server");
+                    sendFile(fileToSend, fileSize, transport);
+                }
+                else
+                {
+                    transport.sendText("FileNotFound");
+                    Console.WriteLine("The file was NOT found on the server");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+            finally
+            {
+                Console.WriteLine("Exits");
+            }
+        }
 
+        /// <summary>
+        /// Sends the file.
+        /// </summary>
+        /// <param name='fileName'>
+        /// File name.
+        /// </param>
+        /// <param name='fileSize'>
+        /// File size.
+        /// </param>
+        /// <param name='tl'>
+        /// Tl.
+        /// </param>
+        private void sendFile(String fileName, long fileSize, Transport transport)
+        {
+            // TO DO Your own code
+            FileStream fileStream = null;
 
-		/// <summary>
-		/// Initializes a new instance of the <see cref="file_server"/> class.
-		/// </summary>
-		private file_server ()
-		{
-			Transport transport = new Transport (BUFSIZE);
-			byte[] buffer = new byte[BUFSIZE];
-			int size = 0;
-			while (true) {
-				
-				while((size = transport.Receive(ref buffer)) == 0)
-				{};
+            try
+            {
+                Console.WriteLine("Size of file: " + fileSize);
+                transport.sendText(fileSize.ToString());
+                byte[] SendingBuffer = null;
+                fileStream = new FileStream(fileName, FileMode.Open, FileAccess.Read);//Find file
+                int NoOfPackets = Convert.ToInt32(Math.Ceiling(Convert.ToDouble(fileStream.Length) / Convert.ToDouble(BUFSIZE)));
+                int TotalLength = (int)fileStream.Length;
+                int CurrentPacketLength, bytesSent = 0;
 
+                for (int i = 1; i < NoOfPackets + 1; i++)
+                {
+                    if (TotalLength > BUFSIZE)
+                    {
+                        CurrentPacketLength = BUFSIZE;
+                        TotalLength = TotalLength - CurrentPacketLength;
+                        bytesSent += BUFSIZE;
+                    }
+                    else
+                    {
+                        CurrentPacketLength = TotalLength;
+                        bytesSent += CurrentPacketLength;
+                    }
+                    SendingBuffer = new byte[CurrentPacketLength];
+                    fileStream.Read(SendingBuffer, 0, CurrentPacketLength);
+                    transport.send(SendingBuffer, (int)SendingBuffer.Length);
+                    Console.Write("\rSubmitted " + i + " by " + NoOfPackets + " packs to the client. Total " + bytesSent + " bytes shipped");
+                }
+                Console.WriteLine("\nThe file was sent - Closes the connection");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+            finally
+            {
+                if (fileStream != null)
+                    fileStream.Close();
+            }
+        }
 
-				if (size != 0) {
-					string filePath = Encoding.UTF8.GetString (buffer, 0, size);
-
-					string tmp = Path.GetFullPath ("File_Server_Home/"+filePath);
-					sendFile (tmp,transport);
-
-				}
-				transport = new Transport (BUFSIZE);
-			}
-		}
-
-		/// <summary>
-		/// Sends the file.
-		/// </summary>
-		/// <param name='fileName'>
-		/// File name.
-		/// </param>
-		/// <param name='fileSize'>
-		/// File size.
-		/// </param>
-		/// <param name='tl'>
-		/// Tl.
-		/// </param>
-		private void sendFile(string filePath, Transport transport)
-		{
-
-			var fileSize = (int)LIB.check_File_Exists (@filePath);
-			var lengthToSend = Encoding.UTF8.GetBytes (fileSize.ToString());
-			transport.Send (lengthToSend,lengthToSend.Length);
-
-			if (fileSize != 0) {
-
-				Console.WriteLine ("Sending file: " + filePath + " to client");
-
-				var fileBuf = new byte[BUFSIZE];
-				var bytesRead = 0;
-
-				using (var fileStream = File.Open (@filePath, FileMode.Open)) {
-
-					while ((bytesRead = ReadChunk (fileStream, ref fileBuf)) != 0) {
-						transport.Send (fileBuf, bytesRead);
-					}
-				
-				}
-				Console.WriteLine ("The requested file was sent");
-
-			} else {
-				Console.WriteLine ("The requested file was not found on the server!");
-			}
-		}
-
-
-		/// <summary>
-		/// Reads the chunk.  https://stackoverflow.com/questions/5659189/how-to-split-a-large-file-into-chunks-in-c
-		/// </summary>
-		/// <returns>index of the chunk</returns>
-		/// <param name="stream">Stream.</param>
-		/// <param name="chunk">Chunk.</param>
-		private int ReadChunk(FileStream stream, ref byte[] chunk)
-		{
-			int index = 0;
-			while (index < chunk.Length) {
-				int bytesRead = stream.Read (chunk, index, chunk.Length - index);
-				if (bytesRead == 0) {
-					break;
-				}
-				index += bytesRead;
-			}
-			return index;
-		}
-
-
-		/// <summary>
-		/// The entry point of the program, where the program control starts and ends.
-		/// </summary>
-		/// <param name='args'>
-		/// The command-line arguments.
-		/// </param>
-		public static void Main (string[] args)
-		{
-			Console.WriteLine (APP);
-			file_server server = new file_server ();
-		}
-	}
+        /// <summary>
+        /// The entry point of the program, where the program control starts and ends.
+        /// </summary>
+        /// <param name='args'>
+        /// The command-line arguments.
+        /// </param>
+        public static void Main(string[] args)
+        {
+            while (true)
+            {
+                file_server server = new file_server();
+            }
+        }
+    }
 }
