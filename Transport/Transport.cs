@@ -153,7 +153,7 @@ namespace Transportlaget
                 if (++errorCount == 100)
                 {
                     buffer[0]++;
-                    Console.WriteLine("  -   Noise introduced - byte 1 has been spoiled in third transmission");
+                    Console.WriteLine($"  -   Noise introduced - byte 1 has been spoiled in transmission #{errorCount}");
                     errorCount = 0;
                 }
                 link.send(buffer, size + HEADER_SIZE);
