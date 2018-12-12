@@ -34,19 +34,37 @@ namespace Application
                 Console.WriteLine($"File name: {Filename}");
 
                 transport.sendText(fileToReceive);
-                if (transport.readText() == "FileFound")
+
+
+                switch (transport.readText())
                 {
-                    Console.WriteLine($"File \"{Filename}\" exists. Commencing Transfer...");
-                    receiveFile(Filename, transport);
+                    case "FileFound":
+                        Console.WriteLine($"File \"{Filename}\" exists. Commencing Transfer...");
+                        receiveFile(Filename, transport);
+                        break;
+                    case "NoFileFound":
+                        Console.WriteLine($"File  \"{Filename}\" does NOT exist on specified path. Aborting Transfer");
+                        break;
+                    default:
+                        Console.WriteLine("unknown error");
+                        break;
                 }
-                else if (transport.readText() == "NoFileFound")
-                {
-                    Console.WriteLine($"File  \"{Filename}\" doen NOT exist on specified path. Aborting Transfer");
-                }
-                else
-                {
-                    Console.WriteLine("unknown error");
-                }
+
+
+
+                //if (transport.readText() == "FileFound")
+                //{
+                //    Console.WriteLine($"File \"{Filename}\" exists. Commencing Transfer...");
+                //    receiveFile(Filename, transport);
+                //}
+                //else if (transport.readText() == "NoFileFound")
+                //{
+                //    Console.WriteLine($"File  \"{Filename}\" does NOT exist on specified path. Aborting Transfer");
+                //}
+                //else
+                //{
+                //    Console.WriteLine("unknown error");
+                //}
             }
             catch (Exception ex)
             {
