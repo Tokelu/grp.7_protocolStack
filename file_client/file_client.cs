@@ -39,7 +39,7 @@ namespace Application
                     Console.WriteLine($"File \"{Filename}\" exists. Commencing Transfer...");
                     receiveFile(Filename, transport);
                 }
-                else if (transport.readText() == "FileNotFound")
+                else if (transport.readText() == "NoFileFound")
                 {
                     Console.WriteLine($"File  \"{Filename}\" doen NOT exist on specified path. Aborting Transfer");
                 }

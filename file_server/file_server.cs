@@ -34,7 +34,7 @@ namespace Application
                 }
                 else
                 {
-                    transport.sendText("FileNotFound");
+                    transport.sendText("NoFileFound");
                     Console.WriteLine($"File {LIB.extractFileName(fileToSend)} do NOT exists. Aborting Transmission... ");
                 }
             }
