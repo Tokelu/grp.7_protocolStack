@@ -34,9 +34,9 @@ namespace Application
                 Console.WriteLine($"File name: {Filename}");
 
                 transport.sendText(fileToReceive);
+                var isFileFound = transport.readText();
 
-
-                switch (transport.readText())
+                switch (isFileFound)
                 {
                     case "FileFound":
                         Console.WriteLine($"File \"{Filename}\" exists. Commencing Transfer...");
@@ -49,8 +49,6 @@ namespace Application
                         Console.WriteLine("unknown error");
                         break;
                 }
-
-
 
                 //if (transport.readText() == "FileFound")
                 //{
