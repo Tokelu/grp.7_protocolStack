@@ -17,26 +17,22 @@ namespace Application
         /// <summary>
         /// Initializes a new instance of the <see cref="file_client"/> class.
         /// 
-        /// file_client metoden opretter en peer-to-peer forbindelse
-        /// Sender en forspÃ¸rgsel for en bestemt fil om denne findes pÃ¥ serveren
-        /// Modtager filen hvis denne findes eller en besked om at den ikke findes (jvf. protokol beskrivelse)
-        /// Lukker alle streams og den modtagede fil
-        /// Udskriver en fejl-meddelelse hvis ikke antal argumenter er rigtige
         /// </summary>
         /// <param name='args'>
         /// Filnavn med evtuelle sti.
         /// </param>
         private file_client(String[] args)
         {
-            // TO DO Your own code
             Transport transport = new Transport(BUFSIZE, APP);
             try
             {
                 
                 Console.WriteLine("Recipient file");
-                string fileToReceive = (args.Length > 0) ? args[0] : "test.txt";
+                string fileToReceive = (args.Length > 0) ? args[0] : "/test/test.txt";
                 Console.WriteLine($"Requesting file: {fileToReceive}");
                 var Filename = LIB.extractFileName(fileToReceive);
+                Console.WriteLine($"File name: {Filename}");
+
                 transport.sendText(fileToReceive);
                 if (transport.readText() == "FileFound")
                 {
@@ -50,17 +46,12 @@ namespace Application
                 else
                 {
                     Console.WriteLine("unknown error");
-
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Exception :(");
                 Console.WriteLine(ex.Message);
-            }
-            finally
-            {
-
             }
         }
 
@@ -84,16 +75,14 @@ namespace Application
 
             FileStream Fs = new FileStream(fileName, FileMode.OpenOrCreate, FileAccess.Write);
 
-           
-
             while (fileSize > totalrecbytes)
             {
                 RecBytes = transport.receive(ref RecData);
                 Fs.Write(RecData, 0, RecBytes);
                 totalrecbytes += RecBytes;
-                Console.Write("\rReceived " + totalrecbytes + " bytes from server");
+                Console.Write("\r" + totalrecbytes + " Bytes of " + fileSize + " bytes received");
             }
-            Console.WriteLine("\nThe file was received - Closes the connection");
+            Console.WriteLine("\nTransfer completed");
             Fs.Close();
         }
 

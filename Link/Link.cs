@@ -68,38 +68,6 @@ namespace Linklaget
 
             var framedDataSize = Enframe(buf, size);
             serialPort.Write(buffer,0,framedDataSize);
-
-
-            //// TO DO Your own code
-
-            //buffer[0] = 65;//start A
-            //int bytesToSendIndex = 1;
-            //for (int i = 0; i < size; i++)
-            //{
-            //    if (buf[i] == 65)
-            //    {
-            //        buffer[bytesToSendIndex] = 66;//B
-            //        bytesToSendIndex++;
-            //        buffer[bytesToSendIndex] = 67;//C
-            //        bytesToSendIndex++;
-            //    }
-            //    else if (buf[i] == 66)
-            //    {
-            //        buffer[bytesToSendIndex] = 66;//B
-
-            //        bytesToSendIndex++;
-            //        buffer[bytesToSendIndex] = 68;//D
-            //        bytesToSendIndex++;
-            //    }
-            //    else
-            //    {
-            //        buffer[bytesToSendIndex] = buf[i];
-            //        bytesToSendIndex++;
-            //    }
-            //}
-            //buffer[bytesToSendIndex] = 65;//ending A
-            //bytesToSendIndex++;
-            //serialPort.Write(buffer, 0, bytesToSendIndex);
         }
 
         /// <summary>
@@ -119,51 +87,6 @@ namespace Linklaget
             var dataSize = Deframe(ref buf, framedDataSize);
 
             return dataSize;
-
-            //// TO DO Your own code
-            //byte[] tempBuf = new byte[1];
-            //int bytesReceived = 0;
-            //while (true)
-            //{
-            //    serialPort.Read(tempBuf, 0, 1);
-
-            //    while (tempBuf[0] != 'A')
-            //    {
-            //    }
-            //    bool registerStop = false;
-
-            //    while (!registerStop)
-            //    {
-
-            //        serialPort.Read(tempBuf, 0, 1);
-
-            //        if (tempBuf[0] == 'A')
-            //            registerStop = true;
-            //        else if (tempBuf[0] == 'B')
-            //        {
-            //            serialPort.Read(tempBuf, 0, 1);
-
-            //            if (tempBuf[0] == 'C')
-            //            {
-            //                buf[bytesReceived] = 65;
-            //                bytesReceived++;
-            //            }
-            //            else if (tempBuf[0] == 'D')
-            //            {
-            //                buf[bytesReceived] = 66;
-            //                bytesReceived++;
-            //            }
-            //            else
-            //                Console.WriteLine("Bad byte after B");
-            //        }
-            //        else
-            //        {
-            //            buf[bytesReceived] = tempBuf[0];
-            //            bytesReceived++;
-            //        }
-            //    }
-            //    return bytesReceived;
-            //}
         }
 
 

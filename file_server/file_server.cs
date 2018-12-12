@@ -24,30 +24,30 @@ namespace Application
            
             try
             {
-                Console.WriteLine("Server runing - Awaiting Client");
+                Console.WriteLine("Server ready - Awaiting Client");
                 string fileToSend = transport.readText();
                 Console.WriteLine("Client connected, want to pick up: " + fileToSend);
                 long fileSize = LIB.check_File_Exists(fileToSend);
                 if (fileSize != 0)
                 {
                     transport.sendText("FileFound");
-                    Console.WriteLine("The file was found on the server");
+                    Console.WriteLine($"File {LIB.extractFileName(fileToSend)} exists. Transmitting... ");
                     sendFile(fileToSend, fileSize, transport);
                 }
                 else
                 {
                     transport.sendText("FileNotFound");
-                    Console.WriteLine("The file was NOT found on the server");
+                    Console.WriteLine($"File {LIB.extractFileName(fileToSend)} do NOT exists. Aborting Transmission... ");
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
             }
-            finally
-            {
-                Console.WriteLine("Exits");
-            }
+            //finally
+            //{
+            //    Console.WriteLine("Exits");
+            //}
         }
 
         /// <summary>
@@ -69,7 +69,7 @@ namespace Application
 
             try
             {
-                Console.WriteLine("Size of file: " + fileSize);
+                Console.WriteLine("File size: " + fileSize);
                 transport.sendText(fileSize.ToString());
                 byte[] SendingBuffer = null;
                 fileStream = new FileStream(fileName, FileMode.Open, FileAccess.Read);//Find file
@@ -93,7 +93,7 @@ namespace Application
                     SendingBuffer = new byte[CurrentPacketLength];
                     fileStream.Read(SendingBuffer, 0, CurrentPacketLength);
                     transport.send(SendingBuffer, (int)SendingBuffer.Length);
-                    Console.Write("\rSubmitted " + i + " by " + NoOfPackets + " packs to the client. Total " + bytesSent + " bytes shipped");
+                    Console.Write("\r Transmitting packet" + i + " of " + NoOfPackets + " to client. - " + bytesSent + " bytes transmitted");
                 }
                 Console.WriteLine("\nThe file was sent - Closes the connection");
             }
