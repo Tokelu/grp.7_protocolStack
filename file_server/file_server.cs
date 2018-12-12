@@ -19,7 +19,6 @@ namespace Application
         /// </summary>
         private file_server()
         { 
-            // TO DO Your own code
             Transport transport = new Transport(BUFSIZE, APP);
            
             try
@@ -93,7 +92,7 @@ namespace Application
                     SendingBuffer = new byte[CurrentPacketLength];
                     fileStream.Read(SendingBuffer, 0, CurrentPacketLength);
                     transport.send(SendingBuffer, (int)SendingBuffer.Length);
-                    Console.Write("\r Transmitting packet" + i + " of " + NoOfPackets + " to client. - " + bytesSent + " bytes transmitted");
+                    Console.Write("\r Transmitting packet" + i + " of " + NoOfPackets + " to client. - " + bytesSent + " bytes transmitted \n");
                 }
                 Console.WriteLine("\nThe file was sent - Closes the connection");
             }
