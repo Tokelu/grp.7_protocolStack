@@ -137,28 +137,54 @@ namespace Transportlaget
         /// </param>
         public void send(byte[] buf, int size)
         {
-
-            // TO DO Your own code
-            buffer[0] = 0;
-            buffer[1] = 0;
-            buffer[2] = seqNo;
-            buffer[3] = 0;
-            Array.Copy(buf, 0, buffer, HEADER_SIZE, buf.Length);
-            checksum.calcChecksum(ref buffer, size + HEADER_SIZE);
+            var failedTransmissions = 0;
 
 
-            bool ackReceived = false;
             do
             {
-                if (++errorCount == 10);
+                buffer[(int)TransCHKSUM.SEQNO] = (byte)seqNo;
+                buffer[(int)TransCHKSUM.TYPE] = (byte)TransType.DATA;
+
+                Array.Copy(buf, 0, buffer, HEADER_SIZE, size);
+
+                checksum.calcChecksum(ref buffer, size + HEADER_SIZE); // data + header
+
+                if (++errorCount == 10)
                 {
                     buffer[0]++;
                     Console.WriteLine("Noise introduced - byte 1 has been spoiled in third transmission");
                     errorCount = 0;
                 }
                 link.send(buffer, size + HEADER_SIZE);
-                ackReceived = receiveAck();
-            } while (!ackReceived);
+                failedTransmissions++;
+
+
+            } while (!receiveAck() && failedTransmissions <= 5);
+
+            old_seqNo = DEFAULT_SEQNO;
+
+
+            //// TO DO Your own code
+            //buffer[0] = 0;
+            //buffer[1] = 0;
+            //buffer[2] = seqNo;
+            //buffer[3] = 0;
+            //Array.Copy(buf, 0, buffer, HEADER_SIZE, buf.Length);
+            //checksum.calcChecksum(ref buffer, size + HEADER_SIZE);
+
+
+            //bool ackReceived = false;
+            //do
+            //{
+            //    if (++errorCount == 10);
+            //    {
+            //        buffer[0]++;
+            //        Console.WriteLine("Noise introduced - byte 1 has been spoiled in third transmission");
+            //        errorCount = 0;
+            //    }
+            //    link.send(buffer, size + HEADER_SIZE);
+            //    ackReceived = receiveAck();
+            //} while (!ackReceived);
 
         }
 
