@@ -139,7 +139,7 @@ namespace Transportlaget
         public void send(byte[] buf, int size)
         {
             var failedTransmissions = 0;
-
+            var sumErrorCount = 0;
 
             do
             {
@@ -153,7 +153,8 @@ namespace Transportlaget
                 if (++errorCount == 100)
                 {
                     buffer[0]++;
-                    Console.WriteLine($"  -   Noise introduced - byte 1 has been spoiled in transmission #{errorCount}");
+                    Console.WriteLine($"  -   Noise introduced - byte 1 has been spoiled in transmission #{sumErrorCount}");
+                    sumErrorCount += errorCount;
                     errorCount = 0;
                 }
                 link.send(buffer, size + HEADER_SIZE);
