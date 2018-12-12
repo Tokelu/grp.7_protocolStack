@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Text;
 using Transportlaget;
 using Library;
 
@@ -92,7 +91,7 @@ namespace Application
                     SendingBuffer = new byte[CurrentPacketLength];
                     fileStream.Read(SendingBuffer, 0, CurrentPacketLength);
                     transport.send(SendingBuffer, (int)SendingBuffer.Length);
-                    Console.Write("\r Transmitting packet" + i + " of " + NoOfPackets + " to client. - " + bytesSent + " bytes transmitted \n");
+                    Console.Write("\r Transmitting packet" + i + " of " + NoOfPackets + " to client. - " + bytesSent + " bytes transmitted ");
                 }
                 Console.WriteLine("\nThe file was sent - Closes the connection");
             }
