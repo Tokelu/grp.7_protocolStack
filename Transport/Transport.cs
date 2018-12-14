@@ -120,7 +120,7 @@ namespace Transportlaget
 
             if (++errorCount2 == 10)
             {
-                buffer[1]++;
+                ackBuf[1]++;
                 Console.WriteLine("  -   Noise introduced - byte 1 has been spoiled in ACK-message");
             }
 
